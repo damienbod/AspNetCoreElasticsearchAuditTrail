@@ -23,12 +23,22 @@ namespace AuditTrail
                 new SerializerFactory((jsonSettings, nestSettings) => jsonSettings.Converters.Add(new StringEnumConverter())));
 
             _elasticClient = new ElasticClient(connectionSettings);
-            CreateIndex(_elasticClient, indexName);
         }
 
         public void AddLog(AuditTrailLog auditTrailLog)
         {
-            throw new NotImplementedException();
+            var index = new IndexName()
+            {
+                Name = indexName
+            };
+
+            var indexRequest = new IndexRequest<AuditTrailLog>(auditTrailLog, index);
+
+            var response = _elasticClient.Index(indexRequest);
+            if (!response.IsValid)
+            {
+                throw new ElasticsearchClientException("Add auditlog disaster!");
+            }
         }
 
         public long Count(string filter)
@@ -37,11 +47,6 @@ namespace AuditTrail
         }
 
         public IEnumerable<AuditTrailLog> SelectItems(string filter, AuditTrailPaging auditTrailPaging = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void CreateIndex(ElasticClient elasticClient, string indexName)
         {
             throw new NotImplementedException();
         }
