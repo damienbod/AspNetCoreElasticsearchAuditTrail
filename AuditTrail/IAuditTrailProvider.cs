@@ -7,7 +7,7 @@ namespace AuditTrail
     {
         void AddLog(AuditTrailLog auditTrailLog);
 
-        IEnumerable<AuditTrailLog> SelectItems(string filter, AuditTrailPaging auditTrailPaging = null);
+        IEnumerable<AuditTrailLog> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null);
 
         long Count(string filter);
     }

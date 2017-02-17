@@ -1,6 +1,7 @@
 ﻿using AuditTrail;
 using AuditTrail.Model;
 using Microsoft.AspNetCore.Mvc;
+using System;
 
 namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 {
@@ -40,7 +41,23 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
             _auditTrailProvider.AddLog(auditTrailLog);
             ViewData["Message"] = "Your application description page.";
 
-            return View();
+            return View(_auditTrailProvider.QueryAuditLogs());
+        }
+
+        public IActionResult AboutSearch(string searchString, int skip, int amount)
+        {
+            if(skip > 0 && amount > 0)
+            {
+                var paging = new AuditTrailPaging
+                {
+                    Size = amount,
+                    Skip = skip
+                };
+
+                return View(_auditTrailProvider.QueryAuditLogs(searchString, paging));
+            }
+
+            return View(_auditTrailProvider.QueryAuditLogs(searchString));
         }
 
         public IActionResult Contact()
@@ -58,6 +75,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 
             return View();
         }
+
 
         public IActionResult Error()
         {

@@ -1,9 +1,5 @@
 ﻿@model List<AuditTrail.Model.AuditTrailLog>
     
-@{
-    ViewData["Title"] = "About";
-}
-
 <h2>Audit Trail Logs</h2>
 
 
@@ -20,6 +16,7 @@
         Size: @Html.TextBox("Amount")
     </p>
 }
+
 <table class="table">
     <tr>
         <th>
