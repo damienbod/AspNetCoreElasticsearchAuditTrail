@@ -65,10 +65,40 @@ namespace AuditTrail
             return searchResponse.Total;
         }
 
-        public IEnumerable<AuditTrailLog> SelectItems(string filter, AuditTrailPaging auditTrailPaging = null)
+        public IEnumerable<AuditTrailLog> SelectItems(string filter = "*", AuditTrailPaging auditTrailPaging = null)
         {
+            var from = 0;
+            var size = 10;
             EnsureAlias();
-            throw new NotImplementedException();
+            if(auditTrailPaging != null)
+            {
+                from = auditTrailPaging.Skip;
+                size = auditTrailPaging.Size;
+                if(size > 1000)
+                {
+                    // max limit 1000 items
+                    size = 1000;
+                }
+            }
+            var searchRequest = new SearchRequest<AuditTrailLog>(Indices.Parse(_alias))
+            {
+                Size = size,
+                From = from,
+                Query = new QueryContainer(
+                    new SimpleQueryStringQuery
+                    {
+                        Query = filter
+                    }
+                ),
+                Sort = new List<ISort>
+                    {
+                        new SortField { Field = TimestampField, Order = SortOrder.Descending }
+                    }
+            };
+
+            var searchResponse = _elasticClient.Search<AuditTrailLog>(searchRequest);
+
+            return searchResponse.Documents;
         }
 
         private void CreateAliasForAllIndices()

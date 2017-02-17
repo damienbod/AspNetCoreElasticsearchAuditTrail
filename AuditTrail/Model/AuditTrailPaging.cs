@@ -6,8 +6,8 @@ namespace AuditTrail.Model
 {
     public class AuditTrailPaging
     {
-        public long Skip { get; set; }
+        public int Skip { get; set; }
 
-        public long Size { get; set; }
+        public int Size { get; set; }
     }
 }
