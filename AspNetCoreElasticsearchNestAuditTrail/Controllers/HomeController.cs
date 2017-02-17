@@ -1,7 +1,9 @@
-﻿using AuditTrail;
+﻿using AspNetCoreElasticsearchNestAuditTrail.ViewModels;
+using AuditTrail;
 using AuditTrail.Model;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Linq;
 
 namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 {
@@ -41,12 +43,27 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
             _auditTrailProvider.AddLog(auditTrailLog);
             ViewData["Message"] = "Your application description page.";
 
-            return View(_auditTrailProvider.QueryAuditLogs());
+            var auditTrailViewModel = new AuditTrailViewModel
+            {
+                AuditTrailLogs = _auditTrailProvider.QueryAuditLogs().ToList(),
+                Filter = "*",
+                Skip = 0,
+                Size = 10
+            };
+            return View(auditTrailViewModel);
         }
 
         public IActionResult AuditTrailSearch(string searchString, int skip, int amount)
         {
-            if(skip > 0 || amount > 0)
+
+            var auditTrailViewModel = new AuditTrailViewModel
+            {
+                Filter = searchString,
+                Skip = skip,
+                Size = amount
+            };
+
+            if (skip > 0 || amount > 0)
             {
                 var paging = new AuditTrailPaging
                 {
@@ -54,10 +71,13 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
                     Skip = skip
                 };
 
-                return View(_auditTrailProvider.QueryAuditLogs(searchString, paging));
+                auditTrailViewModel.AuditTrailLogs = _auditTrailProvider.QueryAuditLogs(searchString, paging).ToList();
+                
+                return View(auditTrailViewModel);
             }
 
-            return View(_auditTrailProvider.QueryAuditLogs(searchString));
+            auditTrailViewModel.AuditTrailLogs = _auditTrailProvider.QueryAuditLogs(searchString).ToList();
+            return View(auditTrailViewModel);
         }
 
         public IActionResult Contact()

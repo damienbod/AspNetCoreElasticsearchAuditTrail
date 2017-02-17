@@ -1,4 +1,4 @@
-﻿@model List<AuditTrail.Model.AuditTrailLog>
+﻿@model AspNetCoreElasticsearchNestAuditTrail.ViewModels.AuditTrailViewModel
     
 <h2>Audit Trail Logs</h2>
 
@@ -6,13 +6,13 @@
 @using (Html.BeginForm("AuditTrailSearch", "Home", FormMethod.Get))
 {
     <p>
-        Filter: <input type="text" class="form-control" id="SearchString" name="SearchString" value="*">
+        Filter: <input type="text" class="form-control" id="SearchString" name="SearchString" value="@Model.Filter">
     </p>
     <p>
-        Skip: <input type="text" class="form-control" id="Skip" name="Skip" value="0">
+        Skip: <input type="text" class="form-control" id="Skip" name="Skip" value="@Model.Skip">
     </p>
     <p>
-        Size: <input type="text" class="form-control" id="amount" name="amount" value="10">
+        Size: <input type="text" class="form-control" id="amount" name="amount" value="@Model.Size">
     </p>
     <p>
         <input class="btn btn-default" type="submit" value="Search" />
@@ -34,7 +34,7 @@
     </tr>
 
 
-    @foreach (var item in Model)
+    @foreach (var item in Model.AuditTrailLogs)
     {
         <tr>
             <td>

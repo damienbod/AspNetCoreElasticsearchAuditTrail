@@ -1,4 +1,4 @@
-﻿@model List<AuditTrail.Model.AuditTrailLog>
+﻿@model AspNetCoreElasticsearchNestAuditTrail.ViewModels.AuditTrailViewModel
     
 @{
     ViewData["Title"] = "About";
@@ -38,7 +38,7 @@
     </tr>
 
 
-    @foreach (var item in Model)
+    @foreach (var item in Model.AuditTrailLogs)
     {
         <tr>
             <td>
