@@ -28,7 +28,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
             return View();
         }
 
-        public IActionResult About()
+        public IActionResult AuditTrail()
         {
             var auditTrailLog = new AuditTrailLog()
             {
@@ -44,9 +44,9 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
             return View(_auditTrailProvider.QueryAuditLogs());
         }
 
-        public IActionResult AboutSearch(string searchString, int skip, int amount)
+        public IActionResult AuditTrailSearch(string searchString, int skip, int amount)
         {
-            if(skip > 0 && amount > 0)
+            if(skip > 0 || amount > 0)
             {
                 var paging = new AuditTrailPaging
                 {

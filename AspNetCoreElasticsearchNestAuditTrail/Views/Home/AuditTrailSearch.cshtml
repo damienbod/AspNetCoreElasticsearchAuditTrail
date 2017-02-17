@@ -3,17 +3,19 @@
 <h2>Audit Trail Logs</h2>
 
 
-@using (Html.BeginForm("AboutSearch", "Home", FormMethod.Get))
+@using (Html.BeginForm("AuditTrailSearch", "Home", FormMethod.Get))
 {
     <p>
-        Filter: @Html.TextBox("SearchString")
-        <input type="submit" value="Search" />
+        Filter: <input type="text" class="form-control" id="SearchString" name="SearchString" value="*">
     </p>
     <p>
-        Skip: @Html.TextBox("Skip")
+        Skip: <input type="text" class="form-control" id="Skip" name="Skip" value="0">
     </p>
     <p>
-        Size: @Html.TextBox("Amount")
+        Size: <input type="text" class="form-control" id="amount" name="amount" value="10">
+    </p>
+    <p>
+        <input class="btn btn-default" type="submit" value="Search" />
     </p>
 }
 
