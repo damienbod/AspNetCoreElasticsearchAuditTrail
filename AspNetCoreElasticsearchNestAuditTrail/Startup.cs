@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using AuditTrail;
+using AuditTrail.Model;
 
 namespace AspNetCoreElasticsearchNestAuditTrail
 {
@@ -24,7 +25,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddAuditTrail(options => options.UseSettings(false, 3));
+            services.AddAuditTrail<CustomAuditTrailLog>(options => options.UseSettings(false, 3));
             services.AddMvc();
         }
 

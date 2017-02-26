@@ -9,21 +9,22 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IAuditTrailProvider _auditTrailProvider;
+        private readonly IAuditTrailProvider<CustomAuditTrailLog> _auditTrailProvider;
 
-        public HomeController(IAuditTrailProvider auditTrailProvider)
+        public HomeController(IAuditTrailProvider<CustomAuditTrailLog> auditTrailProvider)
         {
             _auditTrailProvider = auditTrailProvider;
         }
 
         public IActionResult Index()
         {
-            var auditTrailLog = new AuditTrailLog()
+            var auditTrailLog = new CustomAuditTrailLog()
             {
                 User = User.ToString(),
                 Origin = "HomeController:Index",
                 Action = "Home GET",
-                Log = "home page called doing something important enough to be added to the audit log."
+                Log = "home page called doing something important enough to be added to the audit log.",
+                Extra = "yep"
             };
 
             _auditTrailProvider.AddLog(auditTrailLog);
@@ -32,7 +33,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 
         public IActionResult AuditTrail()
         {
-            var auditTrailLog = new AuditTrailLog()
+            var auditTrailLog = new CustomAuditTrailLog()
             {
                 User = User.ToString(),
                 Origin = "HomeController:About",
@@ -82,7 +83,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 
         public IActionResult Contact()
         {
-            var auditTrailLog = new AuditTrailLog()
+            var auditTrailLog = new CustomAuditTrailLog()
             {
                 User = User.ToString(),
                 Origin = "HomeController:Contact",
@@ -99,7 +100,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 
         public IActionResult Error()
         {
-            var auditTrailLog = new AuditTrailLog()
+            var auditTrailLog = new CustomAuditTrailLog()
             {
                 User = User.ToString(),
                 Origin = "HomeController:Error",

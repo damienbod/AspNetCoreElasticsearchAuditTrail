@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace AuditTrail
 {
-    public class AuditTrailProvider : IAuditTrailProvider
+    public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     {
         private const string _alias = "auditlog";
         private string _indexName = $"{_alias}-{DateTime.UtcNow.ToString("yyyy-MM-dd")}";
@@ -38,14 +38,14 @@ namespace AuditTrail
             _elasticClient = new ElasticClient(connectionSettings);
         }
 
-        public void AddLog(AuditTrailLog auditTrailLog)
+        public void AddLog(T auditTrailLog)
         {
             var index = new IndexName()
             {
                 Name = _indexName
             };
 
-            var indexRequest = new IndexRequest<AuditTrailLog>(auditTrailLog, index);
+            var indexRequest = new IndexRequest<T>(auditTrailLog, index);
 
             var response = _elasticClient.Index(indexRequest);
             if (!response.IsValid)
@@ -57,7 +57,7 @@ namespace AuditTrail
         public long Count(string filter = "*")
         {
             EnsureAlias();
-            var searchRequest = new SearchRequest<AuditTrailLog>(Indices.Parse(_alias))
+            var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
             {
                 Size = 0,
                 Query = new QueryContainer(
@@ -77,7 +77,7 @@ namespace AuditTrail
             return searchResponse.Total;
         }
 
-        public IEnumerable<AuditTrailLog> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null)
+        public IEnumerable<T> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null)
         {
             var from = 0;
             var size = 10;
@@ -92,7 +92,7 @@ namespace AuditTrail
                     size = 1000;
                 }
             }
-            var searchRequest = new SearchRequest<AuditTrailLog>(Indices.Parse(_alias))
+            var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
             {
                 Size = size,
                 From = from,
@@ -108,7 +108,7 @@ namespace AuditTrail
                     }
             };
 
-            var searchResponse = _elasticClient.Search<AuditTrailLog>(searchRequest);
+            var searchResponse = _elasticClient.Search<T>(searchRequest);
 
             return searchResponse.Documents;
         }

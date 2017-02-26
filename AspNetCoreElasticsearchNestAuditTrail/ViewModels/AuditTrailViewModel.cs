@@ -7,7 +7,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.ViewModels
 {
     public class AuditTrailViewModel
     {
-        public List<AuditTrail.Model.AuditTrailLog> AuditTrailLogs { get; set; }
+        public List<CustomAuditTrailLog> AuditTrailLogs { get; set; }
 
         public int Size { get; set; }
 

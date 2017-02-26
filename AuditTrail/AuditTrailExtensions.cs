@@ -13,19 +13,19 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
         /// <returns>The <see cref="IServiceCollection"/>.</returns>
-        public static IServiceCollection AddAuditTrail(this IServiceCollection services)
+        public static IServiceCollection AddAuditTrail<T>(this IServiceCollection services) where T : class
         {
             if (services == null)
             {
                 throw new ArgumentNullException(nameof(services));
             }
 
-            return AddAuditTrail(services, setupAction: null);
+            return AddAuditTrail<T>(services, setupAction: null);
         }
 
-        public static IServiceCollection AddAuditTrail(
+        public static IServiceCollection AddAuditTrail<T>(
             this IServiceCollection services,
-            Action<AuditTrailOptions> setupAction)
+            Action<AuditTrailOptions> setupAction) where T : class
         {
             if (services == null)
             {
@@ -33,8 +33,8 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             services.TryAdd(new ServiceDescriptor(
-                typeof(IAuditTrailProvider),
-                typeof(AuditTrailProvider),
+                typeof(IAuditTrailProvider<T>),
+                typeof(AuditTrailProvider<T>),
                 ServiceLifetime.Transient));
 
             if (setupAction != null)
