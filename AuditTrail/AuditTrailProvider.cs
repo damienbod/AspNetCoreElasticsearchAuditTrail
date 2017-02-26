@@ -132,6 +132,18 @@ namespace AuditTrail
             }
         }
 
+        private void CreateAlias()
+        {
+            if (_options.Value.AmountOfPreviousIndicesUsedInAlias > 0)
+            {
+                CreateAliasForLastNIndices(_options.Value.AmountOfPreviousIndicesUsedInAlias);
+            }
+            else
+            {
+                CreateAliasForAllIndices();
+            }
+        }
+
         private void CreateAliasForLastNIndices(int amount)
         {
             var response = _elasticClient.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
@@ -177,7 +189,7 @@ namespace AuditTrail
                 if (aliasUpdated.Date < DateTime.UtcNow.AddMonths(-1).Date)
                 {
                     aliasUpdated = DateTime.UtcNow;
-                    CreateAliasForAllIndices();
+                    CreateAlias();
                 }
             }
             else
@@ -185,7 +197,7 @@ namespace AuditTrail
                 if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
                 {
                     aliasUpdated = DateTime.UtcNow;
-                    CreateAliasForAllIndices();
+                    CreateAlias();
                 }
             }           
         }
