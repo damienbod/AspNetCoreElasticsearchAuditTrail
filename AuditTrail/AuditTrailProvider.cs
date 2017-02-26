@@ -187,9 +187,7 @@ namespace AuditTrail
                     aliasUpdated = DateTime.UtcNow;
                     CreateAliasForAllIndices();
                 }
-            }
-
-            
+            }           
         }
     }
 }
