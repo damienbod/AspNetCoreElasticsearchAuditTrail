@@ -3,7 +3,7 @@ using System;
 
 namespace AuditTrail.Model
 {
-    public class AuditTrailLog
+    public class AuditTrailLog : IAuditTrailLog
     {
         public AuditTrailLog()
         {

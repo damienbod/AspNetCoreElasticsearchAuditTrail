@@ -13,7 +13,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
         /// <returns>The <see cref="IServiceCollection"/>.</returns>
-        public static IServiceCollection AddAuditTrail<T>(this IServiceCollection services) where T : class
+        public static IServiceCollection AddAuditTrail<T>(this IServiceCollection services) where T : class, IAuditTrailLog
         {
             if (services == null)
             {
@@ -25,7 +25,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
         public static IServiceCollection AddAuditTrail<T>(
             this IServiceCollection services,
-            Action<AuditTrailOptions> setupAction) where T : class
+            Action<AuditTrailOptions> setupAction) where T : class, IAuditTrailLog
         {
             if (services == null)
             {

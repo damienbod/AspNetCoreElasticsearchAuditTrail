@@ -1,9 +1,10 @@
-﻿using Nest;
+﻿using AuditTrail.Model;
+using Nest;
 using System;
 
 namespace AspNetCoreElasticsearchNestAuditTrail
 {
-    public class CustomAuditTrailLog
+    public class CustomAuditTrailLog : IAuditTrailLog
     {
         public CustomAuditTrailLog()
         {
