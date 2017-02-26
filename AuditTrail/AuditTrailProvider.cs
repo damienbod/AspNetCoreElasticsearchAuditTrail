@@ -158,17 +158,25 @@ namespace AuditTrail
             }
 
             List<string> indicesToAddToAlias = new List<string>();
-            for(int i = amount;i>=0;i--)
+            for(int i = amount;i>0;i--)
             {
                 if (_options.Value.IndexPerMonth)
                 {
-                    var indexName = $"auditlog-{DateTime.UtcNow.AddMonths(-amount).ToString("yyyy-MM")}";
-                    indicesToAddToAlias.Add(indexName);
+                    var indexName = $"auditlog-{DateTime.UtcNow.AddMonths(-i + 1).ToString("yyyy-MM")}";
+                    var responseIndexExists = _elasticClient.IndexExists(indexName);
+                    if(responseIndexExists.Exists)
+                    {
+                        indicesToAddToAlias.Add(indexName);
+                    }
                 }
                 else
                 {
-                    var indexName = $"auditlog-{DateTime.UtcNow.AddDays(-amount).ToString("yyyy-MM-dd")}";
-                    indicesToAddToAlias.Add(indexName);
+                    var indexName = $"auditlog-{DateTime.UtcNow.AddDays(-i + 1).ToString("yyyy-MM-dd")}";
+                    var responseIndexExists = _elasticClient.IndexExists(indexName);
+                    if (responseIndexExists.Exists)
+                    {
+                        indicesToAddToAlias.Add(indexName);
+                    }
                 }
             }
 
