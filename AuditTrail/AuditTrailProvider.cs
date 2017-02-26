@@ -5,6 +5,7 @@ using Nest;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AuditTrail
 {
@@ -146,6 +147,29 @@ namespace AuditTrail
 
         private void CreateAliasForLastNIndices(int amount)
         {
+            var responseCatIndices = _elasticClient.CatIndices(new CatIndicesRequest(Indices.Parse("auditlog-*")));
+            var records = responseCatIndices.Records.ToList();
+            List<string> indicesToAddToAlias = new List<string>();
+            for(int i = amount;i>0;i--)
+            {
+                if (_options.Value.IndexPerMonth)
+                {
+                    var indexName = $"auditlog-{DateTime.UtcNow.AddMonths(-i + 1).ToString("yyyy-MM")}";
+                    if(records.Exists(t => t.Index == indexName))
+                    {
+                        indicesToAddToAlias.Add(indexName);
+                    }
+                }
+                else
+                {
+                    var indexName = $"auditlog-{DateTime.UtcNow.AddDays(-i + 1).ToString("yyyy-MM-dd")}";                   
+                    if (records.Exists(t => t.Index == indexName))
+                    {
+                        indicesToAddToAlias.Add(indexName);
+                    }
+                }
+            }
+
             var response = _elasticClient.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
             if (!response.IsValid)
             {
@@ -157,34 +181,11 @@ namespace AuditTrail
                 _elasticClient.DeleteAlias(new DeleteAliasRequest(Indices.Parse("auditlog-*"), _alias));
             }
 
-            List<string> indicesToAddToAlias = new List<string>();
-            for(int i = amount;i>0;i--)
-            {
-                if (_options.Value.IndexPerMonth)
-                {
-                    var indexName = $"auditlog-{DateTime.UtcNow.AddMonths(-i + 1).ToString("yyyy-MM")}";
-                    var responseIndexExists = _elasticClient.IndexExists(indexName);
-                    if(responseIndexExists.Exists)
-                    {
-                        indicesToAddToAlias.Add(indexName);
-                    }
-                }
-                else
-                {
-                    var indexName = $"auditlog-{DateTime.UtcNow.AddDays(-i + 1).ToString("yyyy-MM-dd")}";
-                    var responseIndexExists = _elasticClient.IndexExists(indexName);
-                    if (responseIndexExists.Exists)
-                    {
-                        indicesToAddToAlias.Add(indexName);
-                    }
-                }
-            }
-
             Indices multipleIndicesFromStringArray = indicesToAddToAlias.ToArray();
             var responseCreateIndex = _elasticClient.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
             if (!responseCreateIndex.IsValid)
             {
-                throw response.OriginalException;
+                throw responseCreateIndex.OriginalException;
             }
         }
 
