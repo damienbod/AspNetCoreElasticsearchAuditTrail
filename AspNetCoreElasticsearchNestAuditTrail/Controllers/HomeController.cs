@@ -37,7 +37,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
                 User = User.ToString(),
                 Origin = "HomeController:About",
                 Action = "About GET",
-                Log = "user clicked the about nav."
+                Log = "user clicked the audit trail nav."
             };
 
             _auditTrailProvider.AddLog(auditTrailLog);
@@ -87,7 +87,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
                 User = User.ToString(),
                 Origin = "HomeController:Contact",
                 Action = "Contact GET",
-                Log = "user clicked the about nav."
+                Log = "user clicked the contact nav."
             };
 
             _auditTrailProvider.AddLog(auditTrailLog);

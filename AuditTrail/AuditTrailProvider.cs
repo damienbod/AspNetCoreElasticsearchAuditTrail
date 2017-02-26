@@ -1,5 +1,6 @@
 ﻿using AuditTrail.Model;
 using Elasticsearch.Net;
+using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json.Converters;
 using System;
@@ -12,10 +13,20 @@ namespace AuditTrail
         private string _indexName = $"auditlog-{DateTime.UtcNow.ToString("yyyy-MM-dd")}";
         private const string _alias = "auditlog";
         private static Field TimestampField = new Field("timestamp");
+        private readonly IOptions<AuditTrailOptions> _options;
+
         private ElasticClient _elasticClient { get; }
 
-        public AuditTrailProvider()
+        public AuditTrailProvider(
+           IOptions<AuditTrailOptions> auditTrailOptions)
         {
+            _options = auditTrailOptions ?? throw new ArgumentNullException(nameof(auditTrailOptions));
+
+            if(_options.Value.IndexPerMonth)
+            {
+                _indexName = $"auditlog-{DateTime.UtcNow.ToString("yyyy-MM")}";
+            }
+
             var pool = new StaticConnectionPool(new List<Uri> { new Uri("http://localhost:9200") });
             var connectionSettings = new ConnectionSettings(
                 pool,

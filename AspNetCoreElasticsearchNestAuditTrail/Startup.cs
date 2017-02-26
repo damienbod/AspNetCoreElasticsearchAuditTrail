@@ -24,7 +24,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddTransient<IAuditTrailProvider, AuditTrailProvider>();
+            services.AddAuditTrail(options => options.IndexPerMonth = false);
             // Add framework services.
             services.AddMvc();
         }
