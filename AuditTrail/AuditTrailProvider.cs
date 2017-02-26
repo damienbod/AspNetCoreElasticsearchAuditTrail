@@ -126,7 +126,42 @@ namespace AuditTrail
             }
 
             var responseCreateIndex = _elasticClient.PutAlias(new PutAliasRequest(Indices.Parse("auditlog-*"), _alias));
+            if (!responseCreateIndex.IsValid)
+            {
+                throw response.OriginalException;
+            }
+        }
 
+        private void CreateAliasForLastNIndices(int amount)
+        {
+            var response = _elasticClient.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
+            if (!response.IsValid)
+            {
+                throw response.OriginalException;
+            }
+
+            if (response.Exists)
+            {
+                _elasticClient.DeleteAlias(new DeleteAliasRequest(Indices.Parse("auditlog-*"), _alias));
+            }
+
+            List<string> indicesToAddToAlias = new List<string>();
+            for(int i = amount;i>=0;i--)
+            {
+                if (_options.Value.IndexPerMonth)
+                {
+                    var indexName = $"auditlog-{DateTime.UtcNow.AddMonths(-amount).ToString("yyyy-MM")}";
+                    indicesToAddToAlias.Add(indexName);
+                }
+                else
+                {
+                    var indexName = $"auditlog-{DateTime.UtcNow.AddDays(-amount).ToString("yyyy-MM-dd")}";
+                    indicesToAddToAlias.Add(indexName);
+                }
+            }
+
+            Indices multipleIndicesFromStringArray = indicesToAddToAlias.ToArray();
+            var responseCreateIndex = _elasticClient.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
             if (!responseCreateIndex.IsValid)
             {
                 throw response.OriginalException;
@@ -134,13 +169,27 @@ namespace AuditTrail
         }
 
         private static DateTime aliasUpdated = DateTime.UtcNow.AddYears(-50);
+
         private void EnsureAlias()
         {
-            if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
+            if (_options.Value.IndexPerMonth)
             {
-                aliasUpdated = DateTime.UtcNow;
-                CreateAliasForAllIndices();
+                if (aliasUpdated.Date < DateTime.UtcNow.AddMonths(-1).Date)
+                {
+                    aliasUpdated = DateTime.UtcNow;
+                    CreateAliasForAllIndices();
+                }
             }
+            else
+            {
+                if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
+                {
+                    aliasUpdated = DateTime.UtcNow;
+                    CreateAliasForAllIndices();
+                }
+            }
+
+            
         }
     }
 }
