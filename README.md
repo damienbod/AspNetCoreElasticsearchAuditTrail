@@ -5,3 +5,5 @@
 
 ========================
 # Audit Trail using ASP.NET Core and Elasticsearch Nest
+
+https://damienbod.com/2017/02/28/implementing-an-audit-trail-using-asp-net-core-and-elasticsearch-with-nest/
