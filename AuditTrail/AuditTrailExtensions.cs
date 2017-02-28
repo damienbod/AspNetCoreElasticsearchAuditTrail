@@ -8,11 +8,6 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class AuditTrailExtensions
     {
-        /// <summary>
-        /// Adds services required for application localization.
-        /// </summary>
-        /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
-        /// <returns>The <see cref="IServiceCollection"/>.</returns>
         public static IServiceCollection AddAuditTrail<T>(this IServiceCollection services) where T : class, IAuditTrailLog
         {
             if (services == null)
