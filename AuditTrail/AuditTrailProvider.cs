@@ -29,7 +29,12 @@ namespace AuditTrail
             }
 
             var pool = new StaticConnectionPool(new List<Uri> { new Uri("http://localhost:9200") });
-            var connectionSettings = new ConnectionSettings(pool);
+
+            var connectionSettings = new ConnectionSettings(pool)
+                    .DefaultMappingFor<T>(m => m
+                    .IndexName(_indexName));
+
+           
                 //new HttpConnection(),
                 //new SerializerFactory((jsonSettings, nestSettings) => jsonSettings.Converters.Add(new StringEnumConverter())))
               //.DisableDirectStreaming();
@@ -39,13 +44,7 @@ namespace AuditTrail
 
         public void AddLog(T auditTrailLog)
         {
-            var index = IndexName.From<T>(_indexName);
-            //var index = new IndexName()
-            //{
-            //    Name = _indexName
-            //};
-
-            var indexRequest = new IndexRequest<T>(auditTrailLog, index);
+            var indexRequest = new IndexRequest<T>(auditTrailLog);
 
             var response = _elasticClient.Index(indexRequest);
             if (!response.IsValid)
