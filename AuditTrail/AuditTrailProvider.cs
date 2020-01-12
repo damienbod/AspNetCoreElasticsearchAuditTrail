@@ -146,7 +146,7 @@ namespace AuditTrail
 
         private void CreateAliasForLastNIndices(int amount)
         {
-            var responseCatIndices = _elasticClient.CatIndices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
+            var responseCatIndices = _elasticClient.Cat.Indices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
             var records = responseCatIndices.Records.ToList();
             List<string> indicesToAddToAlias = new List<string>();
             for(int i = amount;i>0;i--)
