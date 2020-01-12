@@ -19,7 +19,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail
         public IConfiguration Configuration { get; }
         public void ConfigureServices(IServiceCollection services)
         {
-            var indexPerMonth = true;
+            var indexPerMonth = false;
             var amountOfPreviousIndicesUsedInAlias = 3;
             services.AddAuditTrail<CustomAuditTrailLog>(options => 
                 options.UseSettings(indexPerMonth, amountOfPreviousIndicesUsedInAlias)
