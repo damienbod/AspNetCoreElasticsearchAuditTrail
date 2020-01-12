@@ -115,10 +115,10 @@ namespace AuditTrail
         private void CreateAliasForAllIndices()
         {
             var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-            if (!response.IsValid)
-            {
-                throw response.OriginalException;
-            }
+            //if (!response.IsValid)
+            //{
+            //    throw response.OriginalException;
+            //}
 
             if (response.Exists)
             {
@@ -170,10 +170,10 @@ namespace AuditTrail
             }
 
             var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-            if (!response.IsValid)
-            {
-                throw response.OriginalException;
-            }
+            //if (!response.IsValid)
+            //{
+            //    throw response.OriginalException;
+            //}
 
             if (response.Exists)
             {
