@@ -67,7 +67,7 @@ namespace AuditTrail
                 ),
                 Sort = new List<ISort>
                     {
-                        new SortField { Field = TimestampField, Order = SortOrder.Descending }
+                        new FieldSort { Field = TimestampField, Order = SortOrder.Descending }
                     }
             };
 
@@ -103,7 +103,7 @@ namespace AuditTrail
                 ),
                 Sort = new List<ISort>
                     {
-                        new SortField { Field = TimestampField, Order = SortOrder.Descending }
+                        new FieldSort { Field = TimestampField, Order = SortOrder.Descending }
                     }
             };
 
@@ -114,18 +114,18 @@ namespace AuditTrail
 
         private void CreateAliasForAllIndices()
         {
-            var response = _elasticClient.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-            if (!response.IsValid)
-            {
-                throw response.OriginalException;
-            }
+            var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
+            //if (!response.IsValid)
+            //{
+            //    throw response.OriginalException;
+            //}
 
             if (response.Exists)
             {
-                _elasticClient.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+                _elasticClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
             }
 
-            var responseCreateIndex = _elasticClient.PutAlias(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+            var responseCreateIndex = _elasticClient.Indices.PutAlias(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
             if (!responseCreateIndex.IsValid)
             {
                 throw response.OriginalException;
@@ -146,7 +146,7 @@ namespace AuditTrail
 
         private void CreateAliasForLastNIndices(int amount)
         {
-            var responseCatIndices = _elasticClient.CatIndices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
+            var responseCatIndices = _elasticClient.Cat.Indices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
             var records = responseCatIndices.Records.ToList();
             List<string> indicesToAddToAlias = new List<string>();
             for(int i = amount;i>0;i--)
@@ -169,19 +169,19 @@ namespace AuditTrail
                 }
             }
 
-            var response = _elasticClient.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-            if (!response.IsValid)
-            {
-                throw response.OriginalException;
-            }
+            var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
+            //if (!response.IsValid)
+            //{
+            //    throw response.OriginalException;
+            //}
 
             if (response.Exists)
             {
-                _elasticClient.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+                _elasticClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
             }
 
             Indices multipleIndicesFromStringArray = indicesToAddToAlias.ToArray();
-            var responseCreateIndex = _elasticClient.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
+            var responseCreateIndex = _elasticClient.Indices.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
             if (!responseCreateIndex.IsValid)
             {
                 throw responseCreateIndex.OriginalException;
