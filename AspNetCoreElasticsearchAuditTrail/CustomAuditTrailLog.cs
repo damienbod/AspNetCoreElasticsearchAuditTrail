@@ -1,7 +1,7 @@
 ﻿using AuditTrail.Model;
 using System;
 
-namespace AspNetCoreElasticsearchNestAuditTrail
+namespace AspNetCoreElasticsearchAuditTrail
 {
     public class CustomAuditTrailLog : IAuditTrailLog
     {

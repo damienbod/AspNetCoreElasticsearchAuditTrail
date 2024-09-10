@@ -1,11 +1,11 @@
-﻿using AspNetCoreElasticsearchNestAuditTrail.ViewModels;
+﻿using AspNetCoreElasticsearchAuditTrail.ViewModels;
 using AuditTrail;
 using AuditTrail.Model;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
+namespace AspNetCoreElasticsearchAuditTrail.Controllers
 {
     public class HomeController : Controller
     {

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace AspNetCoreElasticsearchNestAuditTrail.ViewModels
+namespace AspNetCoreElasticsearchAuditTrail.ViewModels
 {
     public class AuditTrailViewModel
     {
