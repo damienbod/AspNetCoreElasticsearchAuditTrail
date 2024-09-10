@@ -35,6 +35,7 @@ public static class AuditTrailExtensions
         {
             services.Configure(setupAction);
         }
+
         return services;
     }
 }

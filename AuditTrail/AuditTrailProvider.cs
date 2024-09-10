@@ -1,58 +1,51 @@
 ﻿using AuditTrail.Model;
-using Elasticsearch.Net;
+using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Options;
-using Nest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Elastic.Transport;
+using System.Threading.Tasks;
 
 namespace AuditTrail;
 
 public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 {
     private const string _alias = "auditlog";
-    private string _indexName = $"{_alias}-{DateTime.UtcNow.ToString("yyyy-MM-dd")}";
-    private static Field TimestampField = new Field("timestamp");
+    private string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
+    private static Field TimestampField = new("timestamp");
     private readonly IOptions<AuditTrailOptions> _options;
 
-    private ElasticClient _elasticClient { get; }
+    private ElasticsearchClient _elasticsearchClient { get; }
 
-    public AuditTrailProvider(
-       IOptions<AuditTrailOptions> auditTrailOptions)
+    public AuditTrailProvider(IOptions<AuditTrailOptions> auditTrailOptions)
     {
         _options = auditTrailOptions ?? throw new ArgumentNullException(nameof(auditTrailOptions));
 
         if(_options.Value.IndexPerMonth)
         {
-            _indexName = $"{_alias}-{DateTime.UtcNow.ToString("yyyy-MM")}";
+            _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM}";
         }
 
-        var pool = new StaticConnectionPool(new List<Uri> { new Uri("http://localhost:9200") });
+        var settings = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
+            .Authentication(new BasicAuthentication("elastic", "Password1!"))
+            .DefaultMappingFor<T>(m => m.IndexName(_indexName));
 
-        var connectionSettings = new ConnectionSettings(pool)
-                .DefaultMappingFor<T>(m => m
-                .IndexName(_indexName));
-
-       
-            //new HttpConnection(),
-            //new SerializerFactory((jsonSettings, nestSettings) => jsonSettings.Converters.Add(new StringEnumConverter())))
-          //.DisableDirectStreaming();
-
-        _elasticClient = new ElasticClient(connectionSettings);
+        var _elasticsearchClient = new ElasticsearchClient(settings);
     }
 
-    public void AddLog(T auditTrailLog)
+    public async Task AddLog(T auditTrailLog)
     {
         var indexRequest = new IndexRequest<T>(auditTrailLog);
 
-        var response = _elasticClient.Index(indexRequest);
-        if (!response.IsValid)
+        var response = await _elasticsearchClient.IndexAsync(indexRequest);
+        if (!response.IsValidResponse)
         {
-            throw new ElasticsearchClientException("Add auditlog disaster!");
+            throw new ArgumentException("Add auditlog disaster!");
         }
     }
 
-    public long Count(string filter = "*")
+    public async Task<long> Count(string filter = "*")
     {
         EnsureAlias();
         var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
@@ -70,12 +63,12 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
                 }
         };
 
-        var searchResponse = _elasticClient.Search<AuditTrailLog>(searchRequest);
+        var searchResponse = await _elasticsearchClient.SearchAsync<AuditTrailLog>(searchRequest);
 
         return searchResponse.Total;
     }
 
-    public IEnumerable<T> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null)
+    public async Task<IEnumerable<T>> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null)
     {
         var from = 0;
         var size = 10;
@@ -106,26 +99,22 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
                 }
         };
 
-        var searchResponse = _elasticClient.Search<T>(searchRequest);
+        var searchResponse = await _elasticsearchClient.SearchAsync<T>(searchRequest);
 
         return searchResponse.Documents;
     }
 
     private void CreateAliasForAllIndices()
     {
-        var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-        //if (!response.IsValid)
-        //{
-        //    throw response.OriginalException;
-        //}
+        var response = _elasticsearchClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
 
         if (response.Exists)
         {
-            _elasticClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+            _elasticsearchClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
         }
 
-        var responseCreateIndex = _elasticClient.Indices.PutAlias(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
-        if (!responseCreateIndex.IsValid)
+        var responseCreateIndex = _elasticsearchClient.Indices.PutAlias(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+        if (!responseCreateIndex.IsValidResponse)
         {
             throw response.OriginalException;
         }
@@ -145,14 +134,14 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private void CreateAliasForLastNIndices(int amount)
     {
-        var responseCatIndices = _elasticClient.Cat.Indices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
+        var responseCatIndices = _elasticsearchClient.Cat.Indices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
         var records = responseCatIndices.Records.ToList();
         List<string> indicesToAddToAlias = new List<string>();
         for(int i = amount;i>0;i--)
         {
             if (_options.Value.IndexPerMonth)
             {
-                var indexName = $"{_alias}-{DateTime.UtcNow.AddMonths(-i + 1).ToString("yyyy-MM")}";
+                var indexName = $"{_alias}-{DateTime.UtcNow.AddMonths(-i + 1):yyyy-MM}";
                 if(records.Exists(t => t.Index == indexName))
                 {
                     indicesToAddToAlias.Add(indexName);
@@ -168,20 +157,16 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             }
         }
 
-        var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-        //if (!response.IsValid)
-        //{
-        //    throw response.OriginalException;
-        //}
+        var response = _elasticsearchClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
 
         if (response.Exists)
         {
-            _elasticClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+            _elasticsearchClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
         }
 
         Indices multipleIndicesFromStringArray = indicesToAddToAlias.ToArray();
-        var responseCreateIndex = _elasticClient.Indices.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
-        if (!responseCreateIndex.IsValid)
+        var responseCreateIndex = _elasticsearchClient.Indices.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
+        if (!responseCreateIndex.IsValidResponse)
         {
             throw responseCreateIndex.OriginalException;
         }
