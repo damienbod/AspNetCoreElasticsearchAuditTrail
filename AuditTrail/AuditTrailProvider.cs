@@ -18,7 +18,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     private readonly string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
     private readonly static Field TimestampField = new("timestamp");
     private readonly IOptions<AuditTrailOptions> _options;
-    private readonly ElasticsearchClient _elasticsearchClient;
+    private ElasticsearchClient _elasticsearchClient;
 
     public AuditTrailProvider(IOptions<AuditTrailOptions> auditTrailOptions)
     {
@@ -38,6 +38,12 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     public async Task AddLog(T auditTrailLog)
     {
+        var settings = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
+           .Authentication(new BasicAuthentication("elastic", "Password1!"))
+           .DefaultMappingFor<T>(m => m.IndexName(_indexName));
+
+        var _elasticsearchClient = new ElasticsearchClient(settings);
+
         var indexRequest = new IndexRequest<T>(auditTrailLog);
 
         var response = await _elasticsearchClient.IndexAsync(indexRequest);
