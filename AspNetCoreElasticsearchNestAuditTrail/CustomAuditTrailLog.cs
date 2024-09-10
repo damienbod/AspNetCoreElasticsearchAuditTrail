@@ -12,7 +12,8 @@ namespace AspNetCoreElasticsearchNestAuditTrail
 
         public DateTime Timestamp { get; set; }
 
-        [Keyword]
+        // TODO add elastic keyword definition for the property
+        //[Keyword]
         public string Action { get; set; }
 
         public string Log { get; set; }

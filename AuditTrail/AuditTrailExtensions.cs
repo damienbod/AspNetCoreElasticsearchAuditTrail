@@ -9,10 +9,7 @@ public static class AuditTrailExtensions
 {
     public static IServiceCollection AddAuditTrail<T>(this IServiceCollection services) where T : class, IAuditTrailLog
     {
-        if (services == null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
+        ArgumentNullException.ThrowIfNull(services);
 
         return AddAuditTrail<T>(services, setupAction: null);
     }
@@ -21,10 +18,7 @@ public static class AuditTrailExtensions
         this IServiceCollection services,
         Action<AuditTrailOptions> setupAction) where T : class, IAuditTrailLog
     {
-        if (services == null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
+        ArgumentNullException.ThrowIfNull(services);
 
         services.TryAdd(new ServiceDescriptor(
             typeof(IAuditTrailProvider<T>),

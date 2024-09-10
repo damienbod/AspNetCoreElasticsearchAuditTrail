@@ -3,6 +3,7 @@ using AuditTrail;
 using AuditTrail.Model;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
 {
@@ -30,7 +31,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
             return View();
         }
 
-        public IActionResult AuditTrail()
+        public async Task<IActionResult> AuditTrailAsync()
         {
             var auditTrailLog = new CustomAuditTrailLog()
             {
@@ -40,12 +41,12 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
                 Log = "user clicked the audit trail nav."
             };
 
-            _auditTrailProvider.AddLog(auditTrailLog);
+            await _auditTrailProvider.AddLog(auditTrailLog);
             ViewData["Message"] = "Your application description page.";
 
             var auditTrailViewModel = new AuditTrailViewModel
             {
-                AuditTrailLogs = _auditTrailProvider.QueryAuditLogs().ToList(),
+                AuditTrailLogs = (await _auditTrailProvider.QueryAuditLogs()).ToList(),
                 Filter = "*",
                 Skip = 0,
                 Size = 10
@@ -53,7 +54,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
             return View(auditTrailViewModel);
         }
 
-        public IActionResult AuditTrailSearch(string searchString, int skip, int amount)
+        public async Task<IActionResult> AuditTrailSearchAsync(string searchString, int skip, int amount)
         {
 
             var auditTrailViewModel = new AuditTrailViewModel
@@ -71,12 +72,12 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
                     Skip = skip
                 };
 
-                auditTrailViewModel.AuditTrailLogs = _auditTrailProvider.QueryAuditLogs(searchString, paging).ToList();
+                auditTrailViewModel.AuditTrailLogs = (await _auditTrailProvider.QueryAuditLogs(searchString, paging)).ToList();
 
                 return View(auditTrailViewModel);
             }
 
-            auditTrailViewModel.AuditTrailLogs = _auditTrailProvider.QueryAuditLogs(searchString).ToList();
+            auditTrailViewModel.AuditTrailLogs = (await _auditTrailProvider.QueryAuditLogs(searchString)).ToList();
             return View(auditTrailViewModel);
         }
 

@@ -1,6 +1,7 @@
 ﻿using AuditTrail.Model;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.IndexManagement;
+using Elastic.Clients.Elasticsearch.Nodes;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
 using Microsoft.Extensions.Options;
@@ -15,10 +16,9 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 {
     private const string _alias = "auditlog";
     private readonly string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
-    private static Field TimestampField = new("timestamp");
+    private readonly static Field TimestampField = new("timestamp");
     private readonly IOptions<AuditTrailOptions> _options;
-
-    private ElasticsearchClient _elasticsearchClient { get; }
+    private readonly ElasticsearchClient _elasticsearchClient;
 
     public AuditTrailProvider(IOptions<AuditTrailOptions> auditTrailOptions)
     {
@@ -128,7 +128,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
         if (!responseCreateIndex.IsValidResponse)
         {
-            var res = responseCreateIndex.TryGetOriginalException(out var ex);
+            responseCreateIndex.TryGetOriginalException(out var ex);
             throw ex;
         }
     }
@@ -147,8 +147,10 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAliasForLastNIndicesAsync(int amount)
     {
-        var responseCatIndices = _elasticsearchClient.Cat.Indices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
-        var records = responseCatIndices.Records.ToList();
+        var responseCatIndices = await _elasticsearchClient
+            .Indices.GetAsync(new GetIndexRequest(Indices.Parse($"{_alias}-*")));
+        var records = responseCatIndices.Indices.ToList();
+
         var indicesToAddToAlias = new List<string>();
 
         for (int i = amount; i > 0; i--)
@@ -156,7 +158,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             if (_options.Value.IndexPerMonth)
             {
                 var indexName = $"{_alias}-{DateTime.UtcNow.AddMonths(-i + 1):yyyy-MM}";
-                if (records.Exists(t => t.Index == indexName))
+                if (records.Exists(t => t.Key == indexName))
                 {
                     indicesToAddToAlias.Add(indexName);
                 }
@@ -164,7 +166,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             else
             {
                 var indexName = $"{_alias}-{DateTime.UtcNow.AddDays(-i + 1):yyyy-MM-dd}";
-                if (records.Exists(t => t.Index == indexName))
+                if (records.Exists(t => t.Key == indexName))
                 {
                     indicesToAddToAlias.Add(indexName);
                 }
