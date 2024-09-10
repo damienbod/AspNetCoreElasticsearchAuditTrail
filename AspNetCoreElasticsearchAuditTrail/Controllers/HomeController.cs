@@ -5,20 +5,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AspNetCoreElasticsearchAuditTrail.Controllers;
 
-public class HomeController : Controller
+public class HomeController(IAuditTrailProvider<CustomAuditTrailLog> auditTrailProvider) : Controller
 {
-    private readonly IAuditTrailProvider<CustomAuditTrailLog> _auditTrailProvider;
-
-    public HomeController(IAuditTrailProvider<CustomAuditTrailLog> auditTrailProvider)
-    {
-        _auditTrailProvider = auditTrailProvider;
-    }
+    private readonly IAuditTrailProvider<CustomAuditTrailLog> _auditTrailProvider = auditTrailProvider;
 
     public IActionResult Index()
     {
         var auditTrailLog = new CustomAuditTrailLog()
         {
-            User = User.ToString(),
+            User = GetUserName(),
             Origin = "HomeController:Index",
             Action = "Home GET",
             Log = "home page called doing something important enough to be added to the audit log.",
@@ -33,7 +28,7 @@ public class HomeController : Controller
     {
         var auditTrailLog = new CustomAuditTrailLog()
         {
-            User = User.ToString(),
+            User = GetUserName(),
             Origin = "HomeController:About",
             Action = "About GET",
             Log = "user clicked the audit trail nav."
@@ -83,7 +78,7 @@ public class HomeController : Controller
     {
         var auditTrailLog = new CustomAuditTrailLog()
         {
-            User = User.ToString(),
+            User = GetUserName(),
             Origin = "HomeController:Contact",
             Action = "Contact GET",
             Log = "user clicked the contact nav."
@@ -99,7 +94,7 @@ public class HomeController : Controller
     {
         var auditTrailLog = new CustomAuditTrailLog()
         {
-            User = User.ToString(),
+            User = GetUserName(),
             Origin = "HomeController:Error",
             Action = "Error GET",
             Log = "something has gone wrong"
@@ -108,5 +103,10 @@ public class HomeController : Controller
         _auditTrailProvider.AddLog(auditTrailLog);
         ViewData["Message"] = "Your contact page.";
         return View();
+    }
+
+    private string GetUserName()
+    {
+        return User.Identity!.Name ?? "Anonymous";
     }
 }
