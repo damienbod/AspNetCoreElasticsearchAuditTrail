@@ -4,6 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var indexPerMonth = false;
 var amountOfPreviousIndicesUsedInAlias = 3;
+
 builder.Services.AddAuditTrail<CustomAuditTrailLog>(options =>
     options.UseSettings(indexPerMonth, amountOfPreviousIndicesUsedInAlias)
 );

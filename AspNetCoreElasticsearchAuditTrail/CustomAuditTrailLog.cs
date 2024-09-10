@@ -13,13 +13,9 @@ public class CustomAuditTrailLog : IAuditTrailLog
 
     // TODO add elastic keyword definition for the property
     //[Keyword]
-    public string Action { get; set; }
-
-    public string Log { get; set; }
-
-    public string Origin { get; set; }
-
-    public string User { get; set; }
-
-    public string Extra { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string Log { get; set; } = string.Empty;
+    public string Origin { get; set; } = string.Empty;
+    public string User { get; set; } = string.Empty;
+    public string Extra { get; set; } = string.Empty;
 }

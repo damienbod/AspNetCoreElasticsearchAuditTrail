@@ -95,7 +95,6 @@ public class HomeController : Controller
         return View();
     }
 
-
     public IActionResult Error()
     {
         var auditTrailLog = new CustomAuditTrailLog()
