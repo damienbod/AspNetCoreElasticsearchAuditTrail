@@ -1,7 +1,6 @@
 ﻿using AuditTrail.Model;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.IndexManagement;
-using Elastic.Clients.Elasticsearch.Nodes;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
 using Microsoft.Extensions.Options;
@@ -18,7 +17,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     private readonly string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
     private readonly static Field TimestampField = new("timestamp");
     private readonly IOptions<AuditTrailOptions> _options;
-    private ElasticsearchClient _elasticsearchClient;
+    private static ElasticsearchClient _elasticsearchClient;
 
     public AuditTrailProvider(IOptions<AuditTrailOptions> auditTrailOptions)
     {
@@ -29,20 +28,26 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM}";
         }
 
-        var settings = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
-            .Authentication(new BasicAuthentication("elastic", "Password1!"))
-            .DefaultMappingFor<T>(m => m.IndexName(_indexName));
+        EnsureElasticClient(_indexName);
+    }
 
-        var _elasticsearchClient = new ElasticsearchClient(settings);
+    private static void EnsureElasticClient(string indexName)
+    {
+        if(_elasticsearchClient != null)
+        {
+            return;
+        }
+
+        var settings = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
+                    .Authentication(new BasicAuthentication("elastic", "Password1!"))
+                    .DefaultMappingFor<T>(m => m.IndexName(indexName));
+
+        _elasticsearchClient = new ElasticsearchClient(settings);
     }
 
     public async Task AddLog(T auditTrailLog)
     {
-        var settings = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
-           .Authentication(new BasicAuthentication("elastic", "Password1!"))
-           .DefaultMappingFor<T>(m => m.IndexName(_indexName));
-
-        var _elasticsearchClient = new ElasticsearchClient(settings);
+        EnsureElasticClient(_indexName);
 
         var indexRequest = new IndexRequest<T>(auditTrailLog);
 
@@ -69,6 +74,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     public async Task<long> Count(string filter = "*")
     {
+        EnsureElasticClient(_indexName);
         await EnsureAlias();
 
         var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
@@ -90,6 +96,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     {
         var from = 0;
         var size = 10;
+        EnsureElasticClient(_indexName);
         await EnsureAlias();
 
         if (auditTrailPaging != null)
@@ -120,6 +127,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAliasForAllIndicesAsync()
     {
+        EnsureElasticClient(_indexName);
         var response = await _elasticsearchClient.Indices
             .ExistsAliasAsync(new ExistsAliasRequest(new Names(new List<string> { _alias })));
 
@@ -141,6 +149,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAlias()
     {
+        EnsureElasticClient(_indexName);
         if (_options.Value.AmountOfPreviousIndicesUsedInAlias > 0)
         {
             await CreateAliasForLastNIndicesAsync(_options.Value.AmountOfPreviousIndicesUsedInAlias);
@@ -153,6 +162,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAliasForLastNIndicesAsync(int amount)
     {
+        EnsureElasticClient(_indexName);
         var responseCatIndices = await _elasticsearchClient
             .Indices.GetAsync(new GetIndexRequest(Indices.Parse($"{_alias}-*")));
         var records = responseCatIndices.Indices.ToList();
