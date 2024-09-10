@@ -47,6 +47,20 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
         }
     }
 
+    private static List<SortOptions> BuildSort()
+    {
+        var sorts = new List<SortOptions>();
+
+        var sort= SortOptions.Field(TimestampField, new FieldSort
+        {
+            Order = SortOrder.Desc
+        });
+
+        sorts.Add(sort);
+
+        return sorts;
+    }
+
     public async Task<long> Count(string filter = "*")
     {
         await EnsureAlias();
@@ -58,10 +72,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             {
                 Query = filter
             },
-            Sort = new List<SortOptions>
-            {
-                new FieldSort { Field = TimestampField, Order = SortOrder.Desc }
-            }
+            Sort = BuildSort()
         };
 
         var searchResponse = await _elasticsearchClient.SearchAsync<AuditTrailLog>(searchRequest);
@@ -93,10 +104,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             {
                 Query = filter
             },
-            Sort = new List<SortOptions>
-            {
-                new FieldSort { Field = TimestampField, Order = SortOrder.Desc }
-            }
+            Sort = BuildSort()
         };
 
         var searchResponse = await _elasticsearchClient.SearchAsync<T>(searchRequest);
