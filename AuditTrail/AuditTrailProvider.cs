@@ -15,9 +15,11 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 {
     private const string _alias = "auditlog";
     private readonly string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
-    private readonly static Field TimestampField = new("timestamp");
     private readonly IOptions<AuditTrailOptions> _options;
+
+    private readonly static Field TimestampField = new("timestamp");
     private static ElasticsearchClient _elasticsearchClient;
+    private static string _actualIndex = string.Empty;
 
     public AuditTrailProvider(IOptions<AuditTrailOptions> auditTrailOptions)
     {
@@ -36,9 +38,18 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     /// </summary>
     private static void EnsureElasticClient(string indexName)
     {
-        // TODO fix, make this a scoped service
         if (_elasticsearchClient != null)
         {
+            if(_actualIndex != indexName)
+            {
+                var settingsNew = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
+                                .Authentication(new BasicAuthentication("elastic", "Password1!"))
+                                .DefaultMappingFor<T>(m => m.IndexName(indexName));
+
+                _elasticsearchClient = new ElasticsearchClient(settingsNew);
+                _actualIndex = indexName;
+            }
+
             return;
         }
 
