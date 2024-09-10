@@ -29,8 +29,8 @@ public class HomeController(IAuditTrailProvider<CustomAuditTrailLog> auditTrailP
         var auditTrailLog = new CustomAuditTrailLog()
         {
             User = GetUserName(),
-            Origin = "HomeController:About",
-            Action = "About GET",
+            Origin = "HomeController:AuditTrailAsync",
+            Action = "AuditTrailAsync GET",
             Log = "user clicked the audit trail nav."
         };
 
@@ -49,6 +49,15 @@ public class HomeController(IAuditTrailProvider<CustomAuditTrailLog> auditTrailP
 
     public async Task<IActionResult> AuditTrailSearchAsync(string searchString, int skip, int amount)
     {
+        var auditTrailLog = new CustomAuditTrailLog()
+        {
+            User = GetUserName(),
+            Origin = "HomeController:AuditTrailSearchAsync",
+            Action = "AuditTrailSearchAsync GET",
+            Log = $"user clicked the audit trail nav. {searchString}"
+        };
+
+        await _auditTrailProvider.AddLog(auditTrailLog);
 
         var auditTrailViewModel = new AuditTrailViewModel
         {
