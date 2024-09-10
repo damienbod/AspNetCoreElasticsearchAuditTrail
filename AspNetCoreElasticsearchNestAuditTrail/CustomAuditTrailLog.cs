@@ -1,5 +1,4 @@
 ﻿using AuditTrail.Model;
-using Nest;
 using System;
 
 namespace AspNetCoreElasticsearchNestAuditTrail

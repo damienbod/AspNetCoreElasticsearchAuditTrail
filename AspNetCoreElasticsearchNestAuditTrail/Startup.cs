@@ -2,9 +2,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using AuditTrail;
-using AuditTrail.Model;
 using Microsoft.Extensions.Hosting;
 
 namespace AspNetCoreElasticsearchNestAuditTrail
@@ -21,7 +18,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail
         {
             var indexPerMonth = false;
             var amountOfPreviousIndicesUsedInAlias = 3;
-            services.AddAuditTrail<CustomAuditTrailLog>(options => 
+            services.AddAuditTrail<CustomAuditTrailLog>(options =>
                 options.UseSettings(indexPerMonth, amountOfPreviousIndicesUsedInAlias)
             );
 

@@ -1,7 +1,7 @@
-﻿using System;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using AuditTrail;
+﻿using AuditTrail;
 using AuditTrail.Model;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using System;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

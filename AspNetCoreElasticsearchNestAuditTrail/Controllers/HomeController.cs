@@ -2,7 +2,6 @@
 using AuditTrail;
 using AuditTrail.Model;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Linq;
 
 namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
@@ -73,7 +72,7 @@ namespace AspNetCoreElasticsearchNestAuditTrail.Controllers
                 };
 
                 auditTrailViewModel.AuditTrailLogs = _auditTrailProvider.QueryAuditLogs(searchString, paging).ToList();
-                
+
                 return View(auditTrailViewModel);
             }
 

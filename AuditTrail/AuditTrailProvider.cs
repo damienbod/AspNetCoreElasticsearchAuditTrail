@@ -1,12 +1,12 @@
 ﻿using AuditTrail.Model;
 using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Clients.Elasticsearch.IndexManagement;
+using Elastic.Clients.Elasticsearch.QueryDsl;
+using Elastic.Transport;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Elastic.Transport;
 using System.Threading.Tasks;
 
 namespace AuditTrail;
@@ -14,7 +14,7 @@ namespace AuditTrail;
 public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 {
     private const string _alias = "auditlog";
-    private string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
+    private readonly string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
     private static Field TimestampField = new("timestamp");
     private readonly IOptions<AuditTrailOptions> _options;
 
@@ -24,7 +24,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     {
         _options = auditTrailOptions ?? throw new ArgumentNullException(nameof(auditTrailOptions));
 
-        if(_options.Value.IndexPerMonth)
+        if (_options.Value.IndexPerMonth)
         {
             _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM}";
         }
@@ -51,7 +51,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     {
         var sorts = new List<SortOptions>();
 
-        var sort= SortOptions.Field(TimestampField, new FieldSort
+        var sort = SortOptions.Field(TimestampField, new FieldSort
         {
             Order = SortOrder.Desc
         });
@@ -67,7 +67,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
         var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
         {
-            Size = 0, 
+            Size = 0,
             Query = new SimpleQueryStringQuery
             {
                 Query = filter
@@ -86,11 +86,11 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
         var size = 10;
         await EnsureAlias();
 
-        if(auditTrailPaging != null)
+        if (auditTrailPaging != null)
         {
             from = auditTrailPaging.Skip;
             size = auditTrailPaging.Size;
-            if(size > 1000)
+            if (size > 1000)
             {
                 // max limit 1000 items
                 size = 1000;
@@ -151,19 +151,19 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
         var records = responseCatIndices.Records.ToList();
         var indicesToAddToAlias = new List<string>();
 
-        for(int i = amount;i>0;i--)
+        for (int i = amount; i > 0; i--)
         {
             if (_options.Value.IndexPerMonth)
             {
                 var indexName = $"{_alias}-{DateTime.UtcNow.AddMonths(-i + 1):yyyy-MM}";
-                if(records.Exists(t => t.Index == indexName))
+                if (records.Exists(t => t.Index == indexName))
                 {
                     indicesToAddToAlias.Add(indexName);
                 }
             }
             else
             {
-                var indexName = $"{_alias}-{DateTime.UtcNow.AddDays(-i + 1):yyyy-MM-dd}";                   
+                var indexName = $"{_alias}-{DateTime.UtcNow.AddDays(-i + 1):yyyy-MM-dd}";
                 if (records.Exists(t => t.Index == indexName))
                 {
                     indicesToAddToAlias.Add(indexName);
@@ -204,13 +204,11 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
                 await CreateAlias();
             }
         }
-        else
+        else if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
         {
-            if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
-            {
-                aliasUpdated = DateTime.UtcNow;
-                await CreateAlias();
-            }
-        }           
+            aliasUpdated = DateTime.UtcNow;
+            await CreateAlias();
+        }
+
     }
 }
