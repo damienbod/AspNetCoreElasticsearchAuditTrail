@@ -1,14 +1,13 @@
 ﻿using AuditTrail.Model;
 using System.Collections.Generic;
 
-namespace AuditTrail
-{
-     public interface IAuditTrailProvider<T>
-     {
-        void AddLog(T auditTrailLog);
+namespace AuditTrail;
 
-        IEnumerable<T> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null);
+ public interface IAuditTrailProvider<T>
+ {
+    void AddLog(T auditTrailLog);
 
-        long Count(string filter);
-    }
+    IEnumerable<T> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null);
+
+    long Count(string filter);
 }
