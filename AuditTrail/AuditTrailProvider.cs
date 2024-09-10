@@ -34,7 +34,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     private static void EnsureElasticClient(string indexName)
     {
         // TODO fix, make this a scoped service
-        if(_elasticsearchClient != null)
+        if (_elasticsearchClient != null)
         {
             return;
         }
