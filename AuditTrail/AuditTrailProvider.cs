@@ -120,7 +120,8 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
         if (!responseCreateIndex.IsValidResponse)
         {
-            throw response.OriginalException;
+            var res = responseCreateIndex.TryGetOriginalException(out var ex);
+            throw ex;
         }
     }
 
@@ -178,7 +179,8 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
         if (!responseCreateIndex.IsValidResponse)
         {
-            throw responseCreateIndex.OriginalException;
+            var res = responseCreateIndex.TryGetOriginalException(out var ex);
+            throw ex;
         }
     }
 
