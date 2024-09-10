@@ -106,7 +106,8 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAliasForAllIndicesAsync()
     {
-        var response = _elasticsearchClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
+        var response = await _elasticsearchClient.Indices
+            .ExistsAliasAsync(new ExistsAliasRequest(new Names(new List<string> { _alias })));
 
         if (response.Exists)
         {
@@ -161,7 +162,8 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             }
         }
 
-        var response = _elasticsearchClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
+        var response = await _elasticsearchClient.Indices
+            .ExistsAliasAsync(new ExistsAliasRequest(new Names(new List<string> { _alias })));
 
         if (response.Exists)
         {
