@@ -30,21 +30,21 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM}";
         }
 
-        EnsureElasticClient(_indexName);
+        EnsureElasticClient(_indexName, _options.Value);
     }
 
     /// <summary>
     /// ElasticsearchClient should be a singleton
     /// </summary>
-    private static void EnsureElasticClient(string indexName)
+    private static void EnsureElasticClient(string indexName, AuditTrailOptions options)
     {
         if (_elasticsearchClient != null)
         {
             if(_actualIndex != indexName)
             {
-                var settingsNew = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
-                                .Authentication(new BasicAuthentication("elastic", "Password1!"))
-                                .DefaultMappingFor<T>(m => m.IndexName(indexName));
+                var settingsNew = new ElasticsearchClientSettings(new Uri(options.Url))
+                    .Authentication(new BasicAuthentication(options.Username, options.Password))
+                    .DefaultMappingFor<T>(m => m.IndexName(indexName));
 
                 _elasticsearchClient = new ElasticsearchClient(settingsNew);
                 _actualIndex = indexName;
@@ -53,16 +53,16 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             return;
         }
 
-        var settings = new ElasticsearchClientSettings(new Uri("https://localhost:9200"))
-                    .Authentication(new BasicAuthentication("elastic", "Password1!"))
-                    .DefaultMappingFor<T>(m => m.IndexName(indexName));
+        var settings = new ElasticsearchClientSettings(new Uri(options.Url))
+                .Authentication(new BasicAuthentication(options.Username, options.Password))
+                .DefaultMappingFor<T>(m => m.IndexName(indexName));
 
         _elasticsearchClient = new ElasticsearchClient(settings);
     }
 
     public async Task AddLog(T auditTrailLog)
     {
-        EnsureElasticClient(_indexName);
+        EnsureElasticClient(_indexName, _options.Value);
 
         var indexRequest = new IndexRequest<T>(auditTrailLog);
 
@@ -89,7 +89,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     public async Task<long> Count(string filter = "*")
     {
-        EnsureElasticClient(_indexName);
+        EnsureElasticClient(_indexName, _options.Value);
         await EnsureAlias();
 
         var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
@@ -111,7 +111,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     {
         var from = 0;
         var size = 10;
-        EnsureElasticClient(_indexName);
+        EnsureElasticClient(_indexName, _options.Value);
         await EnsureAlias();
 
         if (auditTrailPaging != null)
@@ -142,7 +142,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAliasForAllIndicesAsync()
     {
-        EnsureElasticClient(_indexName);
+        EnsureElasticClient(_indexName, _options.Value);
         var response = await _elasticsearchClient.Indices
             .ExistsAliasAsync(new ExistsAliasRequest(new Names(new List<string> { _alias })));
 
@@ -164,7 +164,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAlias()
     {
-        EnsureElasticClient(_indexName);
+        EnsureElasticClient(_indexName, _options.Value);
         if (_options.Value.AmountOfPreviousIndicesUsedInAlias > 0)
         {
             await CreateAliasForLastNIndicesAsync(_options.Value.AmountOfPreviousIndicesUsedInAlias);
@@ -177,7 +177,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private async Task CreateAliasForLastNIndicesAsync(int amount)
     {
-        EnsureElasticClient(_indexName);
+        EnsureElasticClient(_indexName, _options.Value);
         var responseCatIndices = await _elasticsearchClient
             .Indices.GetAsync(new GetIndexRequest(Indices.Parse($"{_alias}-*")));
         var records = responseCatIndices.Indices.ToList();
