@@ -1,5 +1,7 @@
 ﻿using AuditTrail.Model;
 using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.QueryDsl;
+using Elastic.Clients.Elasticsearch.IndexManagement;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -47,20 +49,19 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     public async Task<long> Count(string filter = "*")
     {
-        EnsureAlias();
+        await EnsureAlias();
+
         var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
         {
-            Size = 0,
-            Query = new QueryContainer(
-                new SimpleQueryStringQuery
-                {
-                    Query = filter
-                }
-            ),
-            Sort = new List<ISort>
-                {
-                    new FieldSort { Field = TimestampField, Order = SortOrder.Descending }
-                }
+            Size = 0, 
+            Query = new SimpleQueryStringQuery
+            {
+                Query = filter
+            },
+            Sort = new List<SortOptions>
+            {
+                new FieldSort { Field = TimestampField, Order = SortOrder.Desc }
+            }
         };
 
         var searchResponse = await _elasticsearchClient.SearchAsync<AuditTrailLog>(searchRequest);
@@ -72,7 +73,8 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     {
         var from = 0;
         var size = 10;
-        EnsureAlias();
+        await EnsureAlias();
+
         if(auditTrailPaging != null)
         {
             from = auditTrailPaging.Skip;
@@ -87,16 +89,14 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
         {
             Size = size,
             From = from,
-            Query = new QueryContainer(
-                new SimpleQueryStringQuery
-                {
-                    Query = filter
-                }
-            ),
-            Sort = new List<ISort>
-                {
-                    new FieldSort { Field = TimestampField, Order = SortOrder.Descending }
-                }
+            Query = new SimpleQueryStringQuery
+            {
+                Query = filter
+            },
+            Sort = new List<SortOptions>
+            {
+                new FieldSort { Field = TimestampField, Order = SortOrder.Desc }
+            }
         };
 
         var searchResponse = await _elasticsearchClient.SearchAsync<T>(searchRequest);
@@ -104,39 +104,43 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
         return searchResponse.Documents;
     }
 
-    private void CreateAliasForAllIndices()
+    private async Task CreateAliasForAllIndicesAsync()
     {
         var response = _elasticsearchClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
 
         if (response.Exists)
         {
-            _elasticsearchClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+            await _elasticsearchClient.Indices
+                .DeleteAliasAsync(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
         }
 
-        var responseCreateIndex = _elasticsearchClient.Indices.PutAlias(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+        var responseCreateIndex = await _elasticsearchClient.Indices
+            .PutAliasAsync(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+
         if (!responseCreateIndex.IsValidResponse)
         {
             throw response.OriginalException;
         }
     }
 
-    private void CreateAlias()
+    private async Task CreateAlias()
     {
         if (_options.Value.AmountOfPreviousIndicesUsedInAlias > 0)
         {
-            CreateAliasForLastNIndices(_options.Value.AmountOfPreviousIndicesUsedInAlias);
+            await CreateAliasForLastNIndicesAsync(_options.Value.AmountOfPreviousIndicesUsedInAlias);
         }
         else
         {
-            CreateAliasForAllIndices();
+            await CreateAliasForAllIndicesAsync();
         }
     }
 
-    private void CreateAliasForLastNIndices(int amount)
+    private async Task CreateAliasForLastNIndicesAsync(int amount)
     {
         var responseCatIndices = _elasticsearchClient.Cat.Indices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
         var records = responseCatIndices.Records.ToList();
-        List<string> indicesToAddToAlias = new List<string>();
+        var indicesToAddToAlias = new List<string>();
+
         for(int i = amount;i>0;i--)
         {
             if (_options.Value.IndexPerMonth)
@@ -149,7 +153,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             }
             else
             {
-                var indexName = $"{_alias}-{DateTime.UtcNow.AddDays(-i + 1).ToString("yyyy-MM-dd")}";                   
+                var indexName = $"{_alias}-{DateTime.UtcNow.AddDays(-i + 1):yyyy-MM-dd}";                   
                 if (records.Exists(t => t.Index == indexName))
                 {
                     indicesToAddToAlias.Add(indexName);
@@ -161,11 +165,15 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
         if (response.Exists)
         {
-            _elasticsearchClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+            await _elasticsearchClient.Indices
+                .DeleteAliasAsync(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
         }
 
         Indices multipleIndicesFromStringArray = indicesToAddToAlias.ToArray();
-        var responseCreateIndex = _elasticsearchClient.Indices.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
+
+        var responseCreateIndex = await _elasticsearchClient.Indices
+            .PutAliasAsync(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
+
         if (!responseCreateIndex.IsValidResponse)
         {
             throw responseCreateIndex.OriginalException;
@@ -174,14 +182,14 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 
     private static DateTime aliasUpdated = DateTime.UtcNow.AddYears(-50);
 
-    private void EnsureAlias()
+    private async Task EnsureAlias()
     {
         if (_options.Value.IndexPerMonth)
         {
             if (aliasUpdated.Date < DateTime.UtcNow.AddMonths(-1).Date)
             {
                 aliasUpdated = DateTime.UtcNow;
-                CreateAlias();
+                await CreateAlias();
             }
         }
         else
@@ -189,7 +197,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
             if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
             {
                 aliasUpdated = DateTime.UtcNow;
-                CreateAlias();
+                await CreateAlias();
             }
         }           
     }

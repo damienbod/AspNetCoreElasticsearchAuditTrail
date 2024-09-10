@@ -1,5 +1,4 @@
-﻿using Nest;
-using System;
+﻿using System;
 
 namespace AuditTrail.Model;
 
