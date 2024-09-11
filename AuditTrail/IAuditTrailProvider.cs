@@ -1,14 +1,14 @@
 ﻿using AuditTrail.Model;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace AuditTrail
+namespace AuditTrail;
+
+public interface IAuditTrailProvider<T>
 {
-     public interface IAuditTrailProvider<T>
-     {
-        void AddLog(T auditTrailLog);
+    Task AddLog(T auditTrailLog);
 
-        IEnumerable<T> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null);
+    Task<IEnumerable<T>> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null);
 
-        long Count(string filter);
-    }
+    Task<long> Count(string filter);
 }

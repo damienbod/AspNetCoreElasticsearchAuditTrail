@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>55293f05-ec3d-4665-9e84-0e57a4a7b49b</UserSecretsId>
+  </PropertyGroup>
+ 
+  <ItemGroup>
+    <ProjectReference Include="..\AuditTrail\AuditTrail.csproj" />
+  </ItemGroup>
+
+</Project>

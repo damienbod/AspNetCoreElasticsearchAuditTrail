@@ -6,3 +6,6 @@ AuditTrail/obj
 .vs/AspNetCoreElasticsearchNestAuditTrail/v15/.suo
 .vs
 /AspNetCoreElasticsearchNestAuditTrail/node_modules/
+*/bin/**
+*/obj/**
+*/node_modules/**

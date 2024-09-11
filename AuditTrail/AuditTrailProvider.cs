@@ -1,213 +1,246 @@
 ﻿using AuditTrail.Model;
-using Elasticsearch.Net;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.IndexManagement;
+using Elastic.Clients.Elasticsearch.QueryDsl;
+using Elastic.Transport;
 using Microsoft.Extensions.Options;
-using Nest;
-using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
-namespace AuditTrail
+namespace AuditTrail;
+
+public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
 {
-    public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
+    private const string _alias = "auditlog";
+    private readonly string _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM-dd}";
+    private readonly IOptions<AuditTrailOptions> _options;
+
+    private readonly static Field TimestampField = new("timestamp");
+    private static ElasticsearchClient _elasticsearchClient;
+    private static string _actualIndex = string.Empty;
+
+    public AuditTrailProvider(IOptions<AuditTrailOptions> auditTrailOptions)
     {
-        private const string _alias = "auditlog";
-        private string _indexName = $"{_alias}-{DateTime.UtcNow.ToString("yyyy-MM-dd")}";
-        private static Field TimestampField = new Field("timestamp");
-        private readonly IOptions<AuditTrailOptions> _options;
+        _options = auditTrailOptions ?? throw new ArgumentNullException(nameof(auditTrailOptions));
 
-        private ElasticClient _elasticClient { get; }
-
-        public AuditTrailProvider(
-           IOptions<AuditTrailOptions> auditTrailOptions)
+        if (_options.Value.IndexPerMonth)
         {
-            _options = auditTrailOptions ?? throw new ArgumentNullException(nameof(auditTrailOptions));
-
-            if(_options.Value.IndexPerMonth)
-            {
-                _indexName = $"{_alias}-{DateTime.UtcNow.ToString("yyyy-MM")}";
-            }
-
-            var pool = new StaticConnectionPool(new List<Uri> { new Uri("http://localhost:9200") });
-
-            var connectionSettings = new ConnectionSettings(pool)
-                    .DefaultMappingFor<T>(m => m
-                    .IndexName(_indexName));
-
-           
-                //new HttpConnection(),
-                //new SerializerFactory((jsonSettings, nestSettings) => jsonSettings.Converters.Add(new StringEnumConverter())))
-              //.DisableDirectStreaming();
-
-            _elasticClient = new ElasticClient(connectionSettings);
+            _indexName = $"{_alias}-{DateTime.UtcNow:yyyy-MM}";
         }
 
-        public void AddLog(T auditTrailLog)
-        {
-            var indexRequest = new IndexRequest<T>(auditTrailLog);
+        EnsureElasticClient(_indexName, _options.Value);
+    }
 
-            var response = _elasticClient.Index(indexRequest);
-            if (!response.IsValid)
+    /// <summary>
+    /// ElasticsearchClient should be a singleton
+    /// </summary>
+    private static void EnsureElasticClient(string indexName, AuditTrailOptions options)
+    {
+        if (_elasticsearchClient != null)
+        {
+            if (_actualIndex != indexName)
             {
-                throw new ElasticsearchClientException("Add auditlog disaster!");
+                var settingsNew = new ElasticsearchClientSettings(new Uri(options.Url))
+                    .Authentication(new BasicAuthentication(options.Username, options.Password))
+                    .DefaultMappingFor<T>(m => m.IndexName(indexName));
+
+                _elasticsearchClient = new ElasticsearchClient(settingsNew);
+                _actualIndex = indexName;
             }
+
+            return;
         }
 
-        public long Count(string filter = "*")
+        var settings = new ElasticsearchClientSettings(new Uri(options.Url))
+                .Authentication(new BasicAuthentication(options.Username, options.Password))
+                .DefaultMappingFor<T>(m => m.IndexName(indexName));
+
+        _elasticsearchClient = new ElasticsearchClient(settings);
+    }
+
+    public async Task AddLog(T auditTrailLog)
+    {
+        EnsureElasticClient(_indexName, _options.Value);
+
+        var indexRequest = new IndexRequest<T>(auditTrailLog);
+
+        var response = await _elasticsearchClient.IndexAsync(indexRequest);
+        if (!response.IsValidResponse)
         {
-            EnsureAlias();
-            var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
-            {
-                Size = 0,
-                Query = new QueryContainer(
-                    new SimpleQueryStringQuery
-                    {
-                        Query = filter
-                    }
-                ),
-                Sort = new List<ISort>
-                    {
-                        new FieldSort { Field = TimestampField, Order = SortOrder.Descending }
-                    }
-            };
-
-            var searchResponse = _elasticClient.Search<AuditTrailLog>(searchRequest);
-
-            return searchResponse.Total;
+            throw new ArgumentException("Add auditlog disaster!");
         }
+    }
 
-        public IEnumerable<T> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null)
+    private static List<SortOptions> BuildSort()
+    {
+        var sorts = new List<SortOptions>();
+
+        var sort = SortOptions.Field(TimestampField, new FieldSort
         {
-            var from = 0;
-            var size = 10;
-            EnsureAlias();
-            if(auditTrailPaging != null)
-            {
-                from = auditTrailPaging.Skip;
-                size = auditTrailPaging.Size;
-                if(size > 1000)
-                {
-                    // max limit 1000 items
-                    size = 1000;
-                }
-            }
-            var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
-            {
-                Size = size,
-                From = from,
-                Query = new QueryContainer(
-                    new SimpleQueryStringQuery
-                    {
-                        Query = filter
-                    }
-                ),
-                Sort = new List<ISort>
-                    {
-                        new FieldSort { Field = TimestampField, Order = SortOrder.Descending }
-                    }
-            };
+            Order = SortOrder.Desc
+        });
 
-            var searchResponse = _elasticClient.Search<T>(searchRequest);
+        sorts.Add(sort);
 
-            return searchResponse.Documents;
-        }
+        return sorts;
+    }
 
-        private void CreateAliasForAllIndices()
+    public async Task<long> Count(string filter = "*")
+    {
+        EnsureElasticClient(_indexName, _options.Value);
+        await EnsureAlias();
+
+        var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
         {
-            var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-            //if (!response.IsValid)
-            //{
-            //    throw response.OriginalException;
-            //}
-
-            if (response.Exists)
+            Size = 0,
+            Query = new SimpleQueryStringQuery
             {
-                _elasticClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
-            }
+                Query = filter
+            },
+            Sort = BuildSort()
+        };
 
-            var responseCreateIndex = _elasticClient.Indices.PutAlias(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
-            if (!responseCreateIndex.IsValid)
+        var searchResponse = await _elasticsearchClient.SearchAsync<AuditTrailLog>(searchRequest);
+
+        return searchResponse.Total;
+    }
+
+    public async Task<IEnumerable<T>> QueryAuditLogs(string filter = "*", AuditTrailPaging auditTrailPaging = null)
+    {
+        var from = 0;
+        var size = 10;
+        EnsureElasticClient(_indexName, _options.Value);
+        await EnsureAlias();
+
+        if (auditTrailPaging != null)
+        {
+            from = auditTrailPaging.Skip;
+            size = auditTrailPaging.Size;
+            if (size > 1000)
             {
-                throw response.OriginalException;
+                // max limit 1000 items
+                size = 1000;
             }
         }
-
-        private void CreateAlias()
+        var searchRequest = new SearchRequest<T>(Indices.Parse(_alias))
         {
-            if (_options.Value.AmountOfPreviousIndicesUsedInAlias > 0)
+            Size = size,
+            From = from,
+            Query = new SimpleQueryStringQuery
             {
-                CreateAliasForLastNIndices(_options.Value.AmountOfPreviousIndicesUsedInAlias);
-            }
-            else
-            {
-                CreateAliasForAllIndices();
-            }
+                Query = filter
+            },
+            Sort = BuildSort()
+        };
+
+        var searchResponse = await _elasticsearchClient.SearchAsync<T>(searchRequest);
+
+        return searchResponse.Documents;
+    }
+
+    private async Task CreateAliasForAllIndicesAsync()
+    {
+        EnsureElasticClient(_indexName, _options.Value);
+        var response = await _elasticsearchClient.Indices
+            .ExistsAliasAsync(new ExistsAliasRequest(new Names(new List<string> { _alias })));
+
+        if (response.Exists)
+        {
+            await _elasticsearchClient.Indices
+                .DeleteAliasAsync(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
         }
 
-        private void CreateAliasForLastNIndices(int amount)
+        var responseCreateIndex = await _elasticsearchClient.Indices
+            .PutAliasAsync(new PutAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+
+        if (!responseCreateIndex.IsValidResponse)
         {
-            var responseCatIndices = _elasticClient.Cat.Indices(new CatIndicesRequest(Indices.Parse($"{_alias}-*")));
-            var records = responseCatIndices.Records.ToList();
-            List<string> indicesToAddToAlias = new List<string>();
-            for(int i = amount;i>0;i--)
-            {
-                if (_options.Value.IndexPerMonth)
-                {
-                    var indexName = $"{_alias}-{DateTime.UtcNow.AddMonths(-i + 1).ToString("yyyy-MM")}";
-                    if(records.Exists(t => t.Index == indexName))
-                    {
-                        indicesToAddToAlias.Add(indexName);
-                    }
-                }
-                else
-                {
-                    var indexName = $"{_alias}-{DateTime.UtcNow.AddDays(-i + 1).ToString("yyyy-MM-dd")}";                   
-                    if (records.Exists(t => t.Index == indexName))
-                    {
-                        indicesToAddToAlias.Add(indexName);
-                    }
-                }
-            }
-
-            var response = _elasticClient.Indices.AliasExists(new AliasExistsRequest(new Names(new List<string> { _alias })));
-            //if (!response.IsValid)
-            //{
-            //    throw response.OriginalException;
-            //}
-
-            if (response.Exists)
-            {
-                _elasticClient.Indices.DeleteAlias(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
-            }
-
-            Indices multipleIndicesFromStringArray = indicesToAddToAlias.ToArray();
-            var responseCreateIndex = _elasticClient.Indices.PutAlias(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
-            if (!responseCreateIndex.IsValid)
-            {
-                throw responseCreateIndex.OriginalException;
-            }
+            responseCreateIndex.TryGetOriginalException(out var ex);
+            throw ex;
         }
+    }
 
-        private static DateTime aliasUpdated = DateTime.UtcNow.AddYears(-50);
+    private async Task CreateAlias()
+    {
+        EnsureElasticClient(_indexName, _options.Value);
+        if (_options.Value.AmountOfPreviousIndicesUsedInAlias > 0)
+        {
+            await CreateAliasForLastNIndicesAsync(_options.Value.AmountOfPreviousIndicesUsedInAlias);
+        }
+        else
+        {
+            await CreateAliasForAllIndicesAsync();
+        }
+    }
 
-        private void EnsureAlias()
+    private async Task CreateAliasForLastNIndicesAsync(int amount)
+    {
+        EnsureElasticClient(_indexName, _options.Value);
+        var responseCatIndices = await _elasticsearchClient
+            .Indices.GetAsync(new GetIndexRequest(Indices.Parse($"{_alias}-*")));
+        var records = responseCatIndices.Indices.ToList();
+
+        var indicesToAddToAlias = new List<string>();
+
+        for (int i = amount; i > 0; i--)
         {
             if (_options.Value.IndexPerMonth)
             {
-                if (aliasUpdated.Date < DateTime.UtcNow.AddMonths(-1).Date)
+                var indexName = $"{_alias}-{DateTime.UtcNow.AddMonths(-i + 1):yyyy-MM}";
+                if (records.Exists(t => t.Key == indexName))
                 {
-                    aliasUpdated = DateTime.UtcNow;
-                    CreateAlias();
+                    indicesToAddToAlias.Add(indexName);
                 }
             }
             else
             {
-                if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
+                var indexName = $"{_alias}-{DateTime.UtcNow.AddDays(-i + 1):yyyy-MM-dd}";
+                if (records.Exists(t => t.Key == indexName))
                 {
-                    aliasUpdated = DateTime.UtcNow;
-                    CreateAlias();
+                    indicesToAddToAlias.Add(indexName);
                 }
-            }           
+            }
+        }
+
+        var response = await _elasticsearchClient.Indices
+            .ExistsAliasAsync(new ExistsAliasRequest(new Names(new List<string> { _alias })));
+
+        if (response.Exists)
+        {
+            await _elasticsearchClient.Indices
+                .DeleteAliasAsync(new DeleteAliasRequest(Indices.Parse($"{_alias}-*"), _alias));
+        }
+
+        Indices multipleIndicesFromStringArray = indicesToAddToAlias.ToArray();
+
+        var responseCreateIndex = await _elasticsearchClient.Indices
+            .PutAliasAsync(new PutAliasRequest(multipleIndicesFromStringArray, _alias));
+
+        if (!responseCreateIndex.IsValidResponse)
+        {
+            var res = responseCreateIndex.TryGetOriginalException(out var ex);
+            throw ex;
+        }
+    }
+
+    private static DateTime aliasUpdated = DateTime.UtcNow.AddYears(-50);
+
+    private async Task EnsureAlias()
+    {
+        if (_options.Value.IndexPerMonth)
+        {
+            if (aliasUpdated.Date < DateTime.UtcNow.AddMonths(-1).Date)
+            {
+                aliasUpdated = DateTime.UtcNow;
+                await CreateAlias();
+            }
+        }
+        else if (aliasUpdated.Date < DateTime.UtcNow.AddDays(-1).Date)
+        {
+            aliasUpdated = DateTime.UtcNow;
+            await CreateAlias();
         }
     }
 }

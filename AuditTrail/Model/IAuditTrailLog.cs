@@ -1,10 +1,8 @@
-﻿using Nest;
-using System;
+﻿using System;
 
-namespace AuditTrail.Model
+namespace AuditTrail.Model;
+
+public interface IAuditTrailLog
 {
-    public interface IAuditTrailLog
-    {
-        DateTime Timestamp { get; set; }
-    }
+    DateTime Timestamp { get; set; }
 }
