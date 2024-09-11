@@ -8,7 +8,7 @@ public class AuditTrailOptions
     public string Password { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
 
-    public void UseSettings(bool indexPerMonth, int amountOfPreviousIndicesUsedInAlias, 
+    public void UseSettings(bool indexPerMonth, int amountOfPreviousIndicesUsedInAlias,
         string userName, string password, string url)
     {
         IndexPerMonth = indexPerMonth;

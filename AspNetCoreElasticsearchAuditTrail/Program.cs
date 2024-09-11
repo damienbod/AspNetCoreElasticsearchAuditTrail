@@ -6,8 +6,8 @@ var indexPerMonth = false;
 var amountOfPreviousIndicesUsedInAlias = 3;
 
 builder.Services.AddAuditTrail<CustomAuditTrailLog>(options =>
-    options.UseSettings(indexPerMonth, 
-        amountOfPreviousIndicesUsedInAlias, 
+    options.UseSettings(indexPerMonth,
+        amountOfPreviousIndicesUsedInAlias,
         builder.Configuration["ElasticsearchUserName"],
         builder.Configuration["ElasearchPassword"],
         builder.Configuration["ElasearchUrl"])

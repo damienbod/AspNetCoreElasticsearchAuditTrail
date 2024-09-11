@@ -40,7 +40,7 @@ public class AuditTrailProvider<T> : IAuditTrailProvider<T> where T : class
     {
         if (_elasticsearchClient != null)
         {
-            if(_actualIndex != indexName)
+            if (_actualIndex != indexName)
             {
                 var settingsNew = new ElasticsearchClientSettings(new Uri(options.Url))
                     .Authentication(new BasicAuthentication(options.Username, options.Password))
