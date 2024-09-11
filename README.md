@@ -5,6 +5,8 @@
 
 https://damienbod.com/2017/02/28/implementing-an-audit-trail-using-asp-net-core-and-elasticsearch-with-nest/
 
+![Overview](https://github.com/damienbod/AspNetCoreElasticsearchAuditTrail/blob/main/images/elastic_auditlog_01.png)
+
 ## History
 
 - 2024-09-10 Switched to Elastic.Clients.Elasticsearch, removed Nest, updated to .NET 8
