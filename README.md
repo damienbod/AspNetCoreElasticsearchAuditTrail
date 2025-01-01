@@ -9,6 +9,7 @@ https://damienbod.com/2017/02/28/implementing-an-audit-trail-using-asp-net-core-
 
 ## History
 
+- 2025-01-01 Updated packages, .NET 9, bootstrap 5
 - 2024-10-25 Updated packages
 - 2024-09-10 Switched to Elastic.Clients.Elasticsearch, removed Nest, updated to .NET 8
 - 2024-09-10 Updated build
